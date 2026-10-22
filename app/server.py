@@ -123,11 +123,22 @@ def tailer():
 
 
 def client_info():
+    empty = {"ip": None, "ago": None, "conns": 0, "online": False, "count": 0}
     try:
-        c = json.loads(CLIENT.read_text())
+        d = json.loads(CLIENT.read_text()).get("clients") or {}
     except Exception:
-        return {"ip": None, "ago": None}
-    return {"ip": c.get("ip"), "ago": int(time.time()) - int(c.get("ts", 0))}
+        return empty
+    if not d:
+        return empty
+    # 优先展示非本机回环的设备
+    def rank(kv):
+        ip_, v = kv
+        local = ip_.startswith("127.") or ip_ == "::1"
+        return (0 if local else 1, v.get("conns", 0), v.get("last", 0))
+    ip, ent = max(d.items(), key=rank)
+    conns = ent.get("conns", 0)
+    return {"ip": ip, "ago": int(time.time() - ent.get("last", 0)),
+            "conns": conns, "online": conns > 0, "count": len(d)}
 
 
 def compact(f):

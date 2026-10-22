@@ -133,7 +133,9 @@ async function status() {
     $('ip').textContent = s.ip;
     $('pp').textContent = s.proxyPort;
     $('wp').textContent = s.webPort;
-    $('cli').textContent = s.client.ago !== null ? s.client.ago + ' 秒前' : '-';
+    $('cli').textContent = s.client.ip
+      ? (s.client.conns > 0 ? s.client.conns + ' 个连接' : s.client.ago + ' 秒前')
+      : '-';
     $('sess').textContent = s.session && s.session.started ? '本次会话 ' + s.session.started : '';
 
     $('pSrv').className = 'pill ' + (s.running ? 'on' : 'off');
@@ -143,9 +145,12 @@ async function status() {
     $('bCap').textContent = s.capture ? '暂停抓包' : '开始抓包';
     $('bCap').className = s.capture ? '' : 'primary';
 
-    const online = s.client.ago !== null && s.client.ago < 30;
-    $('pCli').className = 'pill ' + (online ? 'on' : 'off');
-    $('pCli').textContent = s.client.ip ? ('手机 ' + s.client.ip + (online ? ' 在线' : ' 离线')) : '手机未连接';
+    const online = !!s.client.online;
+    const recent = s.client.ago !== null && s.client.ago < 300;
+    $('pCli').className = 'pill ' + (online ? 'on' : (recent ? '' : 'off'));
+    $('pCli').textContent = s.client.ip
+      ? ('手机 ' + s.client.ip + (online ? ' 在线' : (recent ? ' 最近活动' : ' 离线')))
+      : '手机未连接';
 
     const node = 'http://mac:capture@' + s.ip + ':' + s.proxyPort + '#MacCapture';
     const enc = '/api/qr?t=' + encodeURIComponent(node);

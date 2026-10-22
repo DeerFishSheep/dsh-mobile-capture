@@ -14,8 +14,45 @@ SKIP = (".css", ".js", ".png", ".jpg", ".jpeg", ".gif", ".svg", ".ico", ".webp",
         ".woff2", ".ttf", ".mp4", ".m4a", ".mp3", ".m4s", ".flv")
 MAXB = 4000
 HOT = re.compile(r"(token|auth|cookie|sign|secret|session|ticket|passwd|key)", re.I)
-_touch = {}
+_clients = {}
 _rules = {"m": 0.0, "v": []}
+
+
+def _save_clients():
+    try:
+        CLIENT.write_text(json.dumps({"clients": {
+            ip: {"conns": v["conns"], "last": int(v["last"])} for ip, v in _clients.items()
+        }}))
+    except Exception:
+        pass
+
+
+def _peer(obj):
+    try:
+        peer = getattr(obj, "peername", None) or getattr(obj, "address", None)
+        return peer[0] if peer else None
+    except Exception:
+        return None
+
+
+def client_connected(client):
+    ip = _peer(client)
+    if not ip:
+        return
+    ent = _clients.setdefault(ip, {"conns": 0, "last": 0.0})
+    ent["conns"] += 1
+    ent["last"] = time.time()
+    _save_clients()
+
+
+def client_disconnected(client):
+    ip = _peer(client)
+    if not ip:
+        return
+    ent = _clients.setdefault(ip, {"conns": 0, "last": 0.0})
+    ent["conns"] = max(0, ent["conns"] - 1)
+    ent["last"] = time.time()
+    _save_clients()
 
 
 def _load_rules():
@@ -33,18 +70,14 @@ def _load_rules():
 
 
 def _client(f):
-    try:
-        peer = getattr(f.client_conn, "peername", None) or getattr(f.client_conn, "address", None)
-        ip = peer[0]
-    except Exception:
+    ip = _peer(f.client_conn)
+    if not ip:
         return None
     now = time.time()
-    if now - _touch.get(ip, 0) > 2:
-        _touch[ip] = now
-        try:
-            CLIENT.write_text(json.dumps({"ip": ip, "ts": int(now)}))
-        except Exception:
-            pass
+    ent = _clients.setdefault(ip, {"conns": 0, "last": 0.0})
+    if now - ent["last"] > 2:
+        ent["last"] = now
+        _save_clients()
     return ip
 
 

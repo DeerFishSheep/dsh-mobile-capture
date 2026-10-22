@@ -42,7 +42,16 @@ def cmd_status(args):
     print("服务: %s" % ("运行中" if s["running"] else "代理未运行"))
     print("抓包: %s" % ("开" if s["capture"] else "关"))
     print("地址: %s:%d  控制台: http://%s:%d/" % (s["ip"], s["proxyPort"], s["ip"], s["webPort"]))
-    print("手机: %s" % (("%s %ds前" % (cl["ip"], cl["ago"])) if cl["ip"] else "未连接"))
+    if cl["ip"]:
+        if cl.get("online"):
+            st = "在线 (%d 个连接)" % cl.get("conns", 0)
+        elif cl["ago"] is not None and cl["ago"] < 300:
+            st = "最近活动 %ds 前" % cl["ago"]
+        else:
+            st = "离线"
+        print("手机: %s %s" % (cl["ip"], st))
+    else:
+        print("手机: 未连接")
     print("记录: %d 条" % s["total"])
     return 0
 
