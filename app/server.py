@@ -122,23 +122,40 @@ def tailer():
         time.sleep(0.6)
 
 
-def client_info():
-    empty = {"ip": None, "ago": None, "conns": 0, "online": False, "count": 0}
+def live_peers(port):
+    """直接问系统：谁正连着代理端口"""
     try:
-        d = json.loads(CLIENT.read_text()).get("clients") or {}
+        out = subprocess.run(["lsof", "-nP", "-iTCP:%d" % port, "-sTCP:ESTABLISHED", "-F", "n"],
+                             capture_output=True, text=True, timeout=3).stdout
     except Exception:
-        return empty
-    if not d:
-        return empty
-    # 优先展示非本机回环的设备
-    def rank(kv):
-        ip_, v = kv
-        local = ip_.startswith("127.") or ip_ == "::1"
-        return (0 if local else 1, v.get("conns", 0), v.get("last", 0))
-    ip, ent = max(d.items(), key=rank)
-    conns = ent.get("conns", 0)
-    return {"ip": ip, "ago": int(time.time() - ent.get("last", 0)),
-            "conns": conns, "online": conns > 0, "count": len(d)}
+        return {}
+    peers = {}
+    for line in out.splitlines():
+        if not line.startswith("n") or "->" not in line:
+            continue
+        remote = line[1:].split("->", 1)[1]
+        ip = remote.rsplit(":", 1)[0]
+        peers[ip] = peers.get(ip, 0) + 1
+    return peers
+
+
+def client_info():
+    peers = live_peers(PROXY_PORT)
+    try:
+        seen = json.loads(CLIENT.read_text()).get("clients") or {}
+    except Exception:
+        seen = {}
+    if not peers and not seen:
+        return {"ip": None, "ago": None, "conns": 0, "online": False, "count": 0}
+    # 有连接优先看连接；否则回落到最近活动
+    if peers:
+        ip = max(peers, key=lambda x: (0 if x.startswith("127.") or x == "::1" else 1, peers[x]))
+        ent = seen.get(ip, {})
+        return {"ip": ip, "ago": int(time.time() - ent.get("last", 0)) if ent else None,
+                "conns": peers[ip], "online": True, "count": len(peers)}
+    ip = max(seen, key=lambda x: (0 if x.startswith("127.") or x == "::1" else 1, seen[x].get("last", 0)))
+    return {"ip": ip, "ago": int(time.time() - seen[ip].get("last", 0)),
+            "conns": 0, "online": False, "count": len(seen)}
 
 
 def compact(f):

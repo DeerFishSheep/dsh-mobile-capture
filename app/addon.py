@@ -20,9 +20,7 @@ _rules = {"m": 0.0, "v": []}
 
 def _save_clients():
     try:
-        CLIENT.write_text(json.dumps({"clients": {
-            ip: {"conns": v["conns"], "last": int(v["last"])} for ip, v in _clients.items()
-        }}))
+        CLIENT.write_text(json.dumps({"clients": {ip: {"last": int(v["last"])} for ip, v in _clients.items()}}))
     except Exception:
         pass
 
@@ -35,24 +33,7 @@ def _peer(obj):
         return None
 
 
-def client_connected(client):
-    ip = _peer(client)
-    if not ip:
-        return
-    ent = _clients.setdefault(ip, {"conns": 0, "last": 0.0})
-    ent["conns"] += 1
-    ent["last"] = time.time()
-    _save_clients()
 
-
-def client_disconnected(client):
-    ip = _peer(client)
-    if not ip:
-        return
-    ent = _clients.setdefault(ip, {"conns": 0, "last": 0.0})
-    ent["conns"] = max(0, ent["conns"] - 1)
-    ent["last"] = time.time()
-    _save_clients()
 
 
 def _load_rules():
@@ -74,7 +55,7 @@ def _client(f):
     if not ip:
         return None
     now = time.time()
-    ent = _clients.setdefault(ip, {"conns": 0, "last": 0.0})
+    ent = _clients.setdefault(ip, {"last": 0.0})
     if now - ent["last"] > 2:
         ent["last"] = now
         _save_clients()
