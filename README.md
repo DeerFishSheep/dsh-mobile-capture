@@ -2,6 +2,13 @@
 
 Mac 上跑的 iPhone 抓包服务：mitmproxy + 网页控制台 + 给 agent 的命令行。
 
+## 依赖
+
+- macOS
+- Homebrew（没有就装：https://brew.sh）
+
+mitmproxy 由安装脚本自动安装，Python 环境自动创建，不用手动准备。
+
 ## 安装
 
 ```

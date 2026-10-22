@@ -14,7 +14,9 @@ CLIENT = DATA / "client.json"
 CAPTURE = DATA / "capture.on"
 ADDON = BASE / "addon.py"
 UI = BASE / "ui.html"
-MITMDUMP = os.environ.get("CAP_MITMDUMP", "/opt/homebrew/bin/mitmdump")
+MITMDUMP = (os.environ.get("CAP_MITMDUMP")
+            or shutil.which("mitmdump")
+            or "/opt/homebrew/bin/mitmdump")
 CA = Path.home() / ".mitmproxy" / "mitmproxy-ca-cert.cer"
 PROXY_PORT = int(os.environ.get("CAP_PROXY_PORT", "8080"))
 WEB_PORT = int(os.environ.get("CAP_WEB_PORT", "8899"))

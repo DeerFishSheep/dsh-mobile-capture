@@ -5,6 +5,19 @@ TARGET="$HOME/.mobilecapture"
 PLIST="$HOME/Library/LaunchAgents/com.mobilecapture.server.plist"
 SKILL="$HOME/.dsh/skills/mobile-capture"
 
+echo "检查依赖"
+if ! command -v mitmdump >/dev/null 2>&1; then
+  if command -v brew >/dev/null 2>&1; then
+    echo "安装 mitmproxy（首次较慢）"
+    brew install mitmproxy >/dev/null 2>&1 || { echo "mitmproxy 安装失败，请手动执行: brew install mitmproxy"; exit 1; }
+    find "$(brew --prefix)/Caskroom/mitmproxy" -maxdepth 3 -name "mitmproxy.app" -exec xattr -dr com.apple.quarantine {} \; 2>/dev/null || true
+  else
+    echo "缺少 Homebrew，请先安装: https://brew.sh"
+    exit 1
+  fi
+fi
+command -v mitmdump >/dev/null 2>&1 || { echo "mitmdump 不在 PATH，请确认 /opt/homebrew/bin 已加入"; exit 1; }
+
 echo "安装到 $TARGET"
 mkdir -p "$TARGET/app" "$TARGET/data" "$TARGET/logs"
 cp "$SRC/app/"* "$TARGET/app/"
@@ -51,6 +64,7 @@ BIN=/usr/local/bin
 [ -w "$BIN" ] || { BIN="$HOME/.local/bin"; mkdir -p "$BIN"; }
 ln -sf "$TARGET/app/cap" "$BIN/cap"
 echo "命令已安装: $BIN/cap"
+case ":$PATH:" in *":$BIN:"*) ;; *) echo "提示: $BIN 不在 PATH，重启终端或自行添加";; esac
 
 sleep 2
 IP="$(ipconfig getifaddr en0 2>/dev/null || echo 127.0.0.1)"
