@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""mobile-capture CLI: cap <command>"""
+"""dsh-mobile-capture CLI: cap <command>"""
 import json, os, subprocess, sys, time, urllib.request, urllib.parse
 from collections import Counter
 from pathlib import Path
 
-ROOT = Path(os.environ.get("CAP_HOME", str(Path.home() / ".mobilecapture")))
+ROOT = Path(os.environ.get("CAP_HOME", str(Path.home() / ".dsh-mobile-capture")))
 SESSION = ROOT / "data" / "session"
 FLOWS = SESSION / "flows.jsonl"
 PORT = int(os.environ.get("CAP_WEB_PORT", "8899"))
@@ -64,7 +64,7 @@ def cmd_start(args):
             return 0
         except Exception:
             pass
-    print("启动超时，看 ~/.mobilecapture/logs/server.log")
+    print("启动超时，看 ~/.dsh-mobile-capture/logs/server.log")
     return 1
 
 

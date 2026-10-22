@@ -1,5 +1,5 @@
 ---
-name: mobile-capture
+name: dsh-mobile-capture
 description: 分析移动端设备（iOS/Android 手机、平板）的抓包数据。只要用户提出手机或平板 App 的抓包、抓包分析、接口分析、流量分析需求就使用本技能——例如"帮我抓包""抓一下手机请求""分析我刚抓的 App 请求""看看这个 App 调了哪些接口""这个 App 的 CDN 怎么选""拦截/改包/重放某个请求"，以及提到 Loon、Shadowrocket、Quantumult、Surge、mitmproxy、证书、代理抓包、手机连代理时。不用于电脑端程序的抓包。
 ---
 
@@ -9,7 +9,7 @@ description: 分析移动端设备（iOS/Android 手机、平板）的抓包数�
 
 ## 数据位置
 
-`~/.mobilecapture/data/session/`
+`~/.dsh-mobile-capture/data/session/`
 
 - `flows.jsonl`：请求记录，一行一条（t/m/host/path/st/cip/rq/rs）
 - `bodies/`：超过长度上限的响应全文，flows 里显示为 `<full:文件名>`

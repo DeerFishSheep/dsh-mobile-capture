@@ -1,9 +1,9 @@
 #!/bin/bash
 set -e
 SRC="$(cd "$(dirname "$0")" && pwd)"
-TARGET="$HOME/.mobilecapture"
-PLIST="$HOME/Library/LaunchAgents/com.mobilecapture.server.plist"
-SKILL="$HOME/.dsh/skills/mobile-capture"
+TARGET="$HOME/.dsh-mobile-capture"
+PLIST="$HOME/Library/LaunchAgents/com.dsh-mobile-capture.server.plist"
+SKILL="$HOME/.dsh/skills/dsh-mobile-capture"
 
 echo "检查依赖"
 if ! command -v mitmdump >/dev/null 2>&1; then
@@ -36,7 +36,7 @@ cat > "$PLIST" <<EOF
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0"><dict>
-  <key>Label</key><string>com.mobilecapture.server</string>
+  <key>Label</key><string>com.dsh-mobile-capture.server</string>
   <key>ProgramArguments</key><array>
     <string>$TARGET/venv/bin/python</string>
     <string>$TARGET/app/server.py</string>
@@ -56,9 +56,9 @@ mkdir -p "$SKILL"
 cp "$SRC/skill/SKILL.md" "$SKILL/SKILL.md"
 
 AG="$HOME/.dsh/AGENTS.md"
-LINE="- 抓包分析：本地服务 mobile-capture，数据在 ~/.mobilecapture/data/session/，命令 cap（详见 skill mobile-capture）"
+LINE="- 抓包分析：本地服务 dsh-mobile-capture，数据在 ~/.dsh-mobile-capture/data/session/，命令 cap（详见 skill dsh-mobile-capture）"
 touch "$AG"
-grep -q "mobile-capture" "$AG" || printf "\n%s\n" "$LINE" >> "$AG"
+grep -q "dsh-mobile-capture" "$AG" || printf "\n%s\n" "$LINE" >> "$AG"
 
 BIN=/usr/local/bin
 [ -w "$BIN" ] || { BIN="$HOME/.local/bin"; mkdir -p "$BIN"; }

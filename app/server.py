@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""mobile-capture: 本地抓包服务（mitmproxy + 网页控制台）"""
+"""dsh-mobile-capture: 本地抓包服务（mitmproxy + 网页控制台）"""
 import atexit, http.server, io, json, os, shutil, signal, socket, subprocess, threading, time, urllib.parse
 from pathlib import Path
 
 BASE = Path(__file__).resolve().parent
-ROOT = Path(os.environ.get("CAP_HOME", str(Path.home() / ".mobilecapture")))
+ROOT = Path(os.environ.get("CAP_HOME", str(Path.home() / ".dsh-mobile-capture")))
 DATA = ROOT / "data"
 SESSION = DATA / "session"
 FLOWS = SESSION / "flows.jsonl"
@@ -165,7 +165,7 @@ class H(http.server.BaseHTTPRequestHandler):
             if not CA.exists():
                 return self._send(404, json.dumps({"error": "CA 未生成，先让代理跑一次"}))
             return self._send(200, CA.read_bytes(), "application/x-x509-ca-cert",
-                              {"Content-Disposition": 'attachment; filename="mobilecapture-ca.cer"'})
+                              {"Content-Disposition": 'attachment; filename="dsh-mobile-capture-ca.cer"'})
         if u.path == "/api/status":
             cl = client_info()
             return self._send(200, json.dumps({

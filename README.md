@@ -1,4 +1,4 @@
-# mobile-capture
+# dsh-mobile-capture
 
 Mac 上跑的 iPhone 抓包服务：mitmproxy + 网页控制台 + 给 agent 的命令行。
 
@@ -23,11 +23,11 @@ mitmproxy 由安装脚本自动安装，Python 环境自动创建，不用手动
 
 - 页面：实时看请求、暂停抓包、清空记录、停止服务
 - `cap`：给 agent 和终端用，见 `cap` 无参数输出
-- 开机自启：LaunchAgent `com.mobilecapture.server`
+- 开机自启：LaunchAgent `com.dsh-mobile-capture.server`
 
 ## 数据
 
-`~/.mobilecapture/data/session/`，服务和记录同生共死：停止服务或点清空即删除。
+`~/.dsh-mobile-capture/data/session/`，服务和记录同生共死：停止服务或点清空即删除。
 
 ## 卸载
 
