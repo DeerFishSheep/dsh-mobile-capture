@@ -1,9 +1,9 @@
 #!/bin/bash
 set -e
 SRC="$(cd "$(dirname "$0")" && pwd)"
-TARGET="$HOME/.ioscapture"
-PLIST="$HOME/Library/LaunchAgents/com.ioscapture.server.plist"
-SKILL="$HOME/.dsh/skills/ios-capture"
+TARGET="$HOME/.mobilecapture"
+PLIST="$HOME/Library/LaunchAgents/com.mobilecapture.server.plist"
+SKILL="$HOME/.dsh/skills/mobile-capture"
 
 echo "安装到 $TARGET"
 mkdir -p "$TARGET/app" "$TARGET/data" "$TARGET/logs"
@@ -23,7 +23,7 @@ cat > "$PLIST" <<EOF
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0"><dict>
-  <key>Label</key><string>com.ioscapture.server</string>
+  <key>Label</key><string>com.mobilecapture.server</string>
   <key>ProgramArguments</key><array>
     <string>$TARGET/venv/bin/python</string>
     <string>$TARGET/app/server.py</string>
@@ -43,9 +43,9 @@ mkdir -p "$SKILL"
 cp "$SRC/skill/SKILL.md" "$SKILL/SKILL.md"
 
 AG="$HOME/.dsh/AGENTS.md"
-LINE="- 抓包分析：本地服务 ios-capture，数据在 ~/.ioscapture/data/session/，命令 cap（详见 skill ios-capture）"
+LINE="- 抓包分析：本地服务 mobile-capture，数据在 ~/.mobilecapture/data/session/，命令 cap（详见 skill mobile-capture）"
 touch "$AG"
-grep -q "ios-capture" "$AG" || printf "\n%s\n" "$LINE" >> "$AG"
+grep -q "mobile-capture" "$AG" || printf "\n%s\n" "$LINE" >> "$AG"
 
 BIN=/usr/local/bin
 [ -w "$BIN" ] || { BIN="$HOME/.local/bin"; mkdir -p "$BIN"; }

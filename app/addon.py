@@ -1,4 +1,4 @@
-"""ios-capture addon: 记录请求到会话目录，支持热加载规则"""
+"""mobile-capture addon: 记录请求到会话目录，支持热加载规则"""
 import json, os, re, time
 from pathlib import Path
 from mitmproxy import http

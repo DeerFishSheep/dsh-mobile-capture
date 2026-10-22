@@ -1,4 +1,4 @@
-# ios-capture
+# mobile-capture
 
 Mac 上跑的 iPhone 抓包服务：mitmproxy + 网页控制台 + 给 agent 的命令行。
 
@@ -16,11 +16,11 @@ Mac 上跑的 iPhone 抓包服务：mitmproxy + 网页控制台 + 给 agent 的�
 
 - 页面：实时看请求、暂停抓包、清空记录、停止服务
 - `cap`：给 agent 和终端用，见 `cap` 无参数输出
-- 开机自启：LaunchAgent `com.ioscapture.server`
+- 开机自启：LaunchAgent `com.mobilecapture.server`
 
 ## 数据
 
-`~/.ioscapture/data/session/`，服务和记录同生共死：停止服务或点清空即删除。
+`~/.mobilecapture/data/session/`，服务和记录同生共死：停止服务或点清空即删除。
 
 ## 卸载
 
