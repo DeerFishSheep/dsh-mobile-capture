@@ -1,0 +1,216 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>iOS 抓包控制台</title>
+<style>
+:root{--bg:#0f1115;--card:#171a21;--line:#242833;--txt:#e6e8ee;--dim:#8b93a7;--ok:#3ddc84;--off:#f0564a;--acc:#4c8dff}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--txt);font:14px/1.5 -apple-system,BlinkMacSystemFont,"PingFang SC",sans-serif}
+.wrap{max-width:1180px;margin:0 auto;padding:20px}
+h1{font-size:18px;margin:0 0 14px}
+.pill{display:inline-block;padding:3px 10px;border-radius:99px;font-size:12px;background:#232733;color:var(--dim);margin-right:8px}
+.pill.on{background:rgba(61,220,132,.15);color:var(--ok)}
+.pill.off{background:rgba(240,86,74,.15);color:var(--off)}
+.grid{display:grid;grid-template-columns:320px 1fr;gap:16px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px}
+.kv{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px dashed var(--line);font-size:13px}
+.kv:last-child{border:0}
+.kv b{font-weight:600;font-family:ui-monospace,Menlo,monospace}
+.qr{display:flex;justify-content:center;padding:12px 0}
+.qr img{width:180px;height:180px;background:#fff;border-radius:8px;padding:6px}
+button,a.btn{display:inline-block;background:#232733;color:var(--txt);border:1px solid var(--line);border-radius:8px;padding:8px 12px;font-size:13px;cursor:pointer;text-decoration:none}
+button:hover,a.btn:hover{border-color:var(--acc)}
+button.primary,a.primary{background:var(--acc);border-color:var(--acc);color:#fff}
+button.danger{color:var(--off);border-color:rgba(240,86,74,.4)}
+.row{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+table{width:100%;border-collapse:collapse;font-size:12.5px;font-family:ui-monospace,Menlo,monospace;table-layout:fixed}
+td.p{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+th{text-align:left;color:var(--dim);font-weight:500;padding:6px;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--card)}
+td{padding:6px;border-bottom:1px solid #1b1e26;vertical-align:top}
+tr.hit{cursor:pointer}
+tr.hit:hover{background:#1d212b}
+.m{color:var(--acc)}
+.s2{color:var(--ok)}.s4{color:#e8b93d}.s5{color:var(--off)}
+.host{color:#c6a5ff}
+.detail td{background:#12151b;color:var(--dim);white-space:pre-wrap;word-break:break-all;font-size:11.5px}
+.hint{color:var(--dim);font-size:12px;margin-top:8px}
+input{background:#12151b;border:1px solid var(--line);color:var(--txt);border-radius:8px;padding:7px 10px;font-size:13px;width:100%}
+.mask{position:fixed;inset:0;background:rgba(6,8,12,.86);display:flex;align-items:center;justify-content:center;padding:24px;z-index:9}
+.wizard{background:var(--card);border:1px solid var(--line);border-radius:16px;max-width:720px;width:100%;padding:24px}
+.wizard h2{margin:0 0 4px;font-size:17px}
+.steps{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-top:18px}
+.step{background:#12151b;border:1px solid var(--line);border-radius:10px;padding:14px;text-align:center}
+.step .n{display:inline-block;width:22px;height:22px;line-height:22px;border-radius:50%;background:var(--acc);color:#fff;font-size:12px;margin-bottom:8px}
+.step p{font-size:12px;color:var(--dim);margin:8px 0 10px}
+.step img{width:120px;height:120px;background:#fff;border-radius:6px;padding:4px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>iOS 抓包控制台 <span class="hint" id="sess" style="margin-left:8px"></span></h1>
+  <div style="margin-bottom:14px">
+    <span id="pSrv" class="pill">服务</span>
+    <span id="pCap" class="pill">抓包</span>
+    <span id="pCli" class="pill">手机</span>
+  </div>
+
+  <div class="grid">
+    <div>
+      <div class="card">
+        <div class="kv"><span>局域网 IP</span><b id="ip">-</b></div>
+        <div class="kv"><span>代理端口</span><b id="pp">-</b></div>
+        <div class="kv"><span>控制台端口</span><b id="wp">-</b></div>
+        <div class="kv"><span>手机最近</span><b id="cli">-</b></div>
+        <div class="qr"><img id="qr" alt="QR"></div>
+        <div class="hint">扫码导入节点（Loon 手填 HTTP 节点）</div>
+        <div class="row">
+          <button id="bCap" class="primary">暂停抓包</button>
+          <button id="bClear">清空记录</button>
+          <button id="bQuit" class="danger">停止服务</button>
+        </div>
+        <div class="hint">停止服务会清空本次记录</div>
+      </div>
+      <div class="card" style="margin-top:16px">
+        <div class="kv"><span>证书下载</span><a class="btn" id="caLink" href="/ca">下载 CA</a></div>
+        <div class="hint">手机浏览器打开这个链接安装并信任</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="row" style="margin:0 0 10px">
+        <input id="filter" placeholder="过滤 host 或路径，例如 bilibili">
+        <span id="cnt" class="hint" style="white-space:nowrap">0 条</span>
+      </div>
+      <div style="max-height:70vh;overflow:auto">
+        <table>
+          <thead><tr><th style="width:70px">时间</th><th style="width:56px">方法</th><th style="width:190px">主机</th><th>路径</th><th style="width:52px">状态</th><th style="width:120px">来源</th></tr></thead>
+          <tbody id="tb"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="mask" id="wizard" style="display:none">
+  <div class="wizard">
+    <h2>第一次使用，三步搞定</h2>
+    <div class="hint">手机和电脑连同一个 Wi-Fi</div>
+    <div class="steps">
+      <div class="step">
+        <div class="n">1</div>
+        <div><b>装证书</b></div>
+        <p>手机浏览器打开<br><span id="caUrl" style="color:var(--acc)"></span></p>
+        <a class="btn primary" id="caBtn" href="/ca">下载 CA</a>
+      </div>
+      <div class="step">
+        <div class="n">2</div>
+        <div><b>连代理</b></div>
+        <p>扫码导入节点<br>或手填 HTTP 代理</p>
+        <img id="wqr" alt="QR">
+      </div>
+      <div class="step">
+        <div class="n">3</div>
+        <div><b>等连接</b></div>
+        <p id="wstate">等待手机第一个请求…</p>
+        <button id="wskip">先跳过</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+let last = 0, flows = [], open = new Set(), capOn = true, onboard = true;
+
+const $ = id => document.getElementById(id);
+const esc = s => (s || '').replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+const cls = s => s >= 200 && s < 300 ? 's2' : s >= 400 && s < 500 ? 's4' : s >= 500 ? 's5' : '';
+
+async function status() {
+  try {
+    const s = await (await fetch('/api/status')).json();
+    $('ip').textContent = s.ip;
+    $('pp').textContent = s.proxyPort;
+    $('wp').textContent = s.webPort;
+    $('cli').textContent = s.client.ago !== null ? s.client.ago + ' 秒前' : '-';
+    $('sess').textContent = s.session && s.session.started ? '本次会话 ' + s.session.started : '';
+
+    $('pSrv').className = 'pill ' + (s.running ? 'on' : 'off');
+    $('pSrv').textContent = s.running ? '服务运行中' : '代理未运行';
+    $('pCap').className = 'pill ' + (s.capture ? 'on' : 'off');
+    $('pCap').textContent = s.capture ? '抓包中' : '抓包已暂停';
+    $('bCap').textContent = s.capture ? '暂停抓包' : '开始抓包';
+    $('bCap').className = s.capture ? '' : 'primary';
+
+    const online = s.client.ago !== null && s.client.ago < 30;
+    $('pCli').className = 'pill ' + (online ? 'on' : 'off');
+    $('pCli').textContent = s.client.ip ? ('手机 ' + s.client.ip + (online ? ' 在线' : ' 离线')) : '手机未连接';
+
+    const node = 'http://mac:capture@' + s.ip + ':' + s.proxyPort + '#MacCapture';
+    const enc = '/api/qr?t=' + encodeURIComponent(node);
+    const qr = $('qr'), wqr = $('wqr');
+    if (qr.dataset.t !== node) { qr.dataset.t = node; qr.src = enc; }
+    if (wqr.dataset.t !== node) { wqr.dataset.t = node; wqr.src = enc; }
+    $('caUrl').textContent = 'http://' + s.ip + ':' + s.webPort + '/ca';
+    $('caLink').href = 'http://' + s.ip + ':' + s.webPort + '/ca';
+
+    if (s.onboarding && onboard) { $('wizard').style.display = 'flex'; }
+    if (!s.onboarding && onboard) { onboard = false; $('wizard').style.display = 'none'; }
+    if (s.onboarding) { $('wstate').textContent = s.client.ip ? '已连接 ' + s.client.ip : '等待手机第一个请求…'; }
+  } catch (e) {}
+}
+
+async function flowsTick() {
+  try {
+    const rows = await (await fetch('/api/flows?after=' + last)).json();
+    if (rows.length) {
+      flows = flows.concat(rows).slice(-500);
+      last = rows[rows.length - 1]._s;
+      render();
+    }
+  } catch (e) {}
+}
+
+function render() {
+  const f = $('filter').value.trim().toLowerCase();
+  const list = flows.filter(r => !f || (r.host || '').toLowerCase().includes(f) || (r.path || '').toLowerCase().includes(f));
+  $('cnt').textContent = list.length + ' 条';
+  $('tb').innerHTML = list.slice().reverse().map(r => {
+    const main = '<tr class="hit" data-id="' + r._s + '"><td>' + r.t + '</td><td class="m">' + r.m + '</td>' +
+      '<td class="host">' + esc(r.host) + '</td><td class="p" title="' + esc(r.path) + '">' + esc(r.path) + '</td>' +
+      '<td class="' + cls(r.st) + '">' + r.st + '</td><td>' + esc(r.cip || '-') + '</td></tr>';
+    if (!open.has(r._s)) return main;
+    return main + '<tr class="detail"><td colspan="6">' + (r.rq ? 'REQ\n' + esc(r.rq) + '\n\n' : '') + 'RES\n' + esc(r.rs || '(无内容)') + '</td></tr>';
+  }).join('');
+  $('tb').querySelectorAll('tr.hit').forEach(tr => tr.onclick = () => {
+    const id = +tr.dataset.id;
+    open.has(id) ? open.delete(id) : open.add(id);
+    render();
+  });
+}
+
+$('bCap').onclick = async () => {
+  const next = !capOn;
+  const r = await (await fetch('/api/capture?on=' + (next ? 1 : 0))).json();
+  capOn = r.capture; status();
+};
+$('bClear').onclick = async () => {
+  if (!confirm('清空本次记录？')) return;
+  await fetch('/api/clear'); flows = []; last = 0; render();
+};
+$('bQuit').onclick = async () => {
+  if (!confirm('停止服务并清空记录？')) return;
+  await fetch('/api/quit');
+  document.body.innerHTML = '<div class="wrap"><h1>服务已停止</h1><p class="hint">记录已清空</p></div>';
+};
+$('wskip').onclick = () => { onboard = false; $('wizard').style.display = 'none'; };
+$('filter').oninput = render;
+
+(async function loop() {
+  await status(); await flowsTick();
+  setTimeout(loop, 1500);
+})();
+</script>
+</body>
+</html>

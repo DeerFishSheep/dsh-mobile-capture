@@ -1,0 +1,196 @@
+#!/usr/bin/env python3
+"""ios-capture CLI: cap <command>"""
+import json, os, subprocess, sys, time, urllib.request, urllib.parse
+from collections import Counter
+from pathlib import Path
+
+ROOT = Path(os.environ.get("CAP_HOME", str(Path.home() / ".ioscapture")))
+SESSION = ROOT / "data" / "session"
+FLOWS = SESSION / "flows.jsonl"
+PORT = int(os.environ.get("CAP_WEB_PORT", "8899"))
+APP = Path(__file__).resolve().parent
+
+
+def api(path, timeout=5):
+    with urllib.request.urlopen("http://127.0.0.1:%d%s" % (PORT, path), timeout=timeout) as r:
+        return json.loads(r.read().decode())
+
+
+def rows():
+    if not FLOWS.exists():
+        return []
+    out = []
+    for line in FLOWS.read_text(encoding="utf-8", errors="ignore").splitlines():
+        if line.strip():
+            try:
+                out.append(json.loads(line))
+            except Exception:
+                pass
+    return out
+
+
+def cmd_status(args):
+    try:
+        s = api("/api/status")
+    except Exception:
+        print("服务未运行")
+        return 1
+    if "--json" in args:
+        print(json.dumps(s, ensure_ascii=False))
+        return 0
+    cl = s["client"]
+    print("服务: %s" % ("运行中" if s["running"] else "代理未运行"))
+    print("抓包: %s" % ("开" if s["capture"] else "关"))
+    print("地址: %s:%d  控制台: http://%s:%d/" % (s["ip"], s["proxyPort"], s["ip"], s["webPort"]))
+    print("手机: %s" % (("%s %ds前" % (cl["ip"], cl["ago"])) if cl["ip"] else "未连接"))
+    print("记录: %d 条" % s["total"])
+    return 0
+
+
+def cmd_start(args):
+    if subprocess.run(["curl", "-s", "--max-time", "2", "http://127.0.0.1:%d/api/status" % PORT],
+                      capture_output=True).returncode == 0:
+        print("已在运行")
+        return 0
+    py = ROOT / "venv" / "bin" / "python"
+    py = str(py) if py.exists() else sys.executable
+    subprocess.Popen([py, str(APP / "server.py")], cwd=str(APP), start_new_session=True,
+                     stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    for _ in range(20):
+        time.sleep(0.5)
+        try:
+            s = api("/api/status", timeout=2)
+            print("已启动 http://%s:%d/" % (s["ip"], s["webPort"]))
+            return 0
+        except Exception:
+            pass
+    print("启动超时，看 ~/.ioscapture/logs/server.log")
+    return 1
+
+
+def cmd_stop(args):
+    try:
+        api("/api/quit", timeout=3)
+    except Exception:
+        pass
+    print("已停止，本次记录已清空")
+    return 0
+
+
+def cmd_clear(args):
+    try:
+        api("/api/clear")
+        print("已清空")
+    except Exception:
+        print("服务未运行")
+        return 1
+    return 0
+
+
+def cmd_qr(args):
+    try:
+        s = api("/api/status")
+    except Exception:
+        print("服务未运行")
+        return 1
+    node = "http://mac:capture@%s:%d#MacCapture" % (s["ip"], s["proxyPort"])
+    url = "http://%s:%d/api/qr?t=%s" % (s["ip"], s["webPort"], urllib.parse.quote(node, safe=""))
+    print(node)
+    print("二维码: %s" % url)
+    return 0
+
+
+def cmd_digest(args):
+    data = rows()
+    if not data:
+        print("没有记录")
+        return 1
+    hosts = Counter(r.get("host") for r in data)
+    codes = Counter(r.get("st") for r in data)
+    print("# 抓包摘要")
+    print("记录 %d 条，涉及 %d 个域名" % (len(data), len(hosts)))
+    print("")
+    print("## 域名 Top")
+    for h, n in hosts.most_common(12):
+        print("- %s  %d" % (h, n))
+    print("")
+    print("## 状态码")
+    for c, n in sorted(codes.items(), key=lambda x: -x[1]):
+        print("- %s  %d" % (c, n))
+    print("")
+    print("## 接口样本")
+    seen = set()
+    for r in data:
+        key = (r.get("host"), (r.get("path") or "").split("?")[0])
+        if key in seen:
+            continue
+        seen.add(key)
+        if len(seen) > 25:
+            break
+        print("- %s %s%s" % (r.get("m"), r.get("host"), (r.get("path") or "").split("?")[0]))
+    return 0
+
+
+def cmd_flows(args):
+    n = 50
+    host = None
+    if "-n" in args:
+        n = int(args[args.index("-n") + 1])
+    if "--host" in args:
+        host = args[args.index("--host") + 1].lower()
+    data = [r for r in rows() if not host or host in (r.get("host") or "").lower()]
+    for r in data[-n:]:
+        print("%s %-6s %-34s %-50s %s" % (r.get("t"), r.get("m"), (r.get("host") or "")[:34],
+                                          (r.get("path") or "").split("?")[0][:50], r.get("st")))
+    if not data:
+        print("没有记录")
+        return 1
+    return 0
+
+
+def cmd_show(args):
+    if not args:
+        print("用法: cap show <序号>")
+        return 1
+    idx = int(args[0])
+    data = rows()
+    if idx < 1 or idx > len(data):
+        print("序号超范围，共 %d 条" % len(data))
+        return 1
+    r = data[idx - 1]
+    print(json.dumps(r, ensure_ascii=False, indent=2)[:8000])
+    return 0
+
+
+def cmd_search(args):
+    if not args:
+        print("用法: cap search <关键词>")
+        return 1
+    kw = args[0].lower()
+    hit = 0
+    for i, r in enumerate(rows(), 1):
+        blob = json.dumps(r, ensure_ascii=False).lower()
+        if kw in blob:
+            hit += 1
+            print("%d\t%s %s%s\t%s" % (i, r.get("m"), r.get("host"), (r.get("path") or "").split("?")[0], r.get("st")))
+            if hit >= 30:
+                break
+    if not hit:
+        print("没找到")
+        return 1
+    return 0
+
+
+CMDS = {"status": cmd_status, "start": cmd_start, "stop": cmd_stop, "clear": cmd_clear,
+        "qr": cmd_qr, "digest": cmd_digest, "flows": cmd_flows, "show": cmd_show, "search": cmd_search}
+
+
+def main():
+    if len(sys.argv) < 2 or sys.argv[1] not in CMDS:
+        print("用法: cap {%s} [参数]" % "|".join(CMDS))
+        return 1
+    return CMDS[sys.argv[1]](sys.argv[2:])
+
+
+if __name__ == "__main__":
+    sys.exit(main())
